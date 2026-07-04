@@ -1,0 +1,42 @@
+[project]
+name = "mario-rl-nns"
+version = "0.1.0"
+description = "Mario RL harness for NNS / partial-moment reward shaping experiments."
+readme = "README.md"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+    "gym-super-mario-bros",
+    "stable-baselines3",
+    "torch",
+    "opencv-python-headless",
+    "tensorboard",
+    "pandas",
+    "matplotlib",
+    "rich",
+    "psutil",
+    "nvidia-ml-py",
+    "pyyaml",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[project.scripts]
+mario-smoke-env = "mario_rl_nns.make_env:main"
+mario-smoke-train-env = "mario_rl_nns.wrappers:main"
+mario-check-nns = "mario_rl_nns.nns_rewards:main"
+mario-train-sb3 = "mario_rl_nns.train_sb3:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF"]

@@ -1,0 +1,10 @@
+variant: ppo_flat_penalty
+env_id: SuperMarioBros-1-1-v0
+action_space: RIGHT_ONLY
+seed: 0
+total_timesteps: 50000
+n_envs: 4
+device: auto
+flat_death_penalty: 0.5
+flat_stuck_penalty: 0.1
+

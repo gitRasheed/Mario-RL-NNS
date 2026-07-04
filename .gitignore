@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Environments and local config
+.venv/
+.env
+.env.*
+!.env.example
+
+# Tool caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Build outputs
+build/
+dist/
+site/
+
+# Experiment outputs
+artifacts/runs/*
+artifacts/videos/*
+artifacts/plots/*
+!artifacts/runs/.gitkeep
+!artifacts/videos/.gitkeep
+!artifacts/plots/.gitkeep
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
