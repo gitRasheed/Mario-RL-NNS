@@ -22,6 +22,12 @@ scripts/smoke_env.sh --steps 100
 scripts/train_smoke.sh
 ```
 
+Quick throughput benchmark:
+
+```bash
+scripts/bench_instance.sh --n-envs 4 --device cuda --train-timesteps 2048
+```
+
 ## First Gates
 
 Smoke-test the Mario environment:
