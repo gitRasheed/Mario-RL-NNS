@@ -13,6 +13,6 @@ nns:
   lambda_down: 0.1
   lambda_stuck: 0.1
   lambda_death: 0.5
+  lambda_timeout: 0.0
   clip_min: -5.0
   clip_max: 5.0
-

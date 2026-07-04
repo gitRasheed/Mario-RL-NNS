@@ -27,6 +27,7 @@ class NNSRewardConfig:
     lambda_up: float = 0.02
     lambda_stuck: float = 0.1
     lambda_death: float = 0.5
+    lambda_timeout: float = 0.0
     clip_min: float = -5.0
     clip_max: float = 5.0
 
@@ -45,7 +46,13 @@ class NNSRewardState:
         self.progress.clear()
         self.progress.append(float(progress))
 
-    def shape(self, reward_base: float, progress: float, death: bool = False) -> dict[str, float]:
+    def shape(
+        self,
+        reward_base: float,
+        progress: float,
+        death: bool = False,
+        timeout: bool = False,
+    ) -> dict[str, float]:
         if not self.progress:
             self.reset(progress)
         self.progress.append(float(progress))
@@ -63,19 +70,24 @@ class NNSRewardState:
 
         extra -= self.config.lambda_stuck * stuck
         extra -= self.config.lambda_death * float(death)
+        extra -= self.config.lambda_timeout * float(timeout)
         extra = min(max(extra, self.config.clip_min), self.config.clip_max)
 
         return {
             "reward_base": float(reward_base),
             "reward_train": float(reward_base + extra),
             "nns_extra_reward": float(extra),
+            "extra_reward": float(extra),
             "lpm": float(down),
+            "lpm_speed": float(down),
             "upm": float(up),
+            "upm_speed": float(up),
             "target_speed": float(self.config.target_speed),
             "actual_speed": float(actual_speed),
             "speed_margin": float(actual_speed - self.config.target_speed),
             "stuck": stuck,
             "death": float(death),
+            "timeout": float(timeout),
         }
 
 
@@ -93,4 +105,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

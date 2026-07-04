@@ -13,6 +13,7 @@ from stable_baselines3.common.vec_env import (
 )
 
 from mario_rl_nns.make_env import ACTION_SPACES, make_mario_env
+from mario_rl_nns.reward_wrappers import RewardShapingConfig, RewardShapingWrapper
 
 
 def make_preprocessed_env(
@@ -20,9 +21,12 @@ def make_preprocessed_env(
     action_space: str = "RIGHT_ONLY",
     seed: int = 0,
     rank: int = 0,
+    reward_shaping: RewardShapingConfig | None = None,
 ) -> Callable[[], Monitor]:
     def thunk() -> Monitor:
         env = make_mario_env(env_id=env_id, action_space=action_space)
+        if reward_shaping is not None:
+            env = RewardShapingWrapper(env, reward_shaping)
         env = ResizeObservation(env, (84, 84))
         env = GrayscaleObservation(env, keep_dim=True)
         env = Monitor(env)
@@ -37,9 +41,16 @@ def make_vec_env(
     action_space: str = "RIGHT_ONLY",
     seed: int = 0,
     n_envs: int = 1,
+    reward_shaping: RewardShapingConfig | None = None,
 ):
     env_fns = [
-        make_preprocessed_env(env_id=env_id, action_space=action_space, seed=seed, rank=rank)
+        make_preprocessed_env(
+            env_id=env_id,
+            action_space=action_space,
+            seed=seed,
+            rank=rank,
+            reward_shaping=reward_shaping,
+        )
         for rank in range(n_envs)
     ]
     vec_env = DummyVecEnv(env_fns) if n_envs == 1 else SubprocVecEnv(env_fns, start_method="fork")

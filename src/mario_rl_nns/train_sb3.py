@@ -8,8 +8,45 @@ from pathlib import Path
 
 import yaml
 from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import BaseCallback
 
+from mario_rl_nns.reward_wrappers import reward_shaping_from_config
 from mario_rl_nns.wrappers import make_vec_env
+
+
+class ShapingMetricsCallback(BaseCallback):
+    def __init__(self, path: Path):
+        super().__init__()
+        self.path = path
+        self.rows: list[dict[str, float]] = []
+
+    def _on_step(self) -> bool:
+        for info in self.locals.get("infos", []):
+            shaping = info.get("shaping")
+            if isinstance(shaping, dict):
+                self.rows.append(
+                    {
+                        key: float(value)
+                        for key, value in shaping.items()
+                        if isinstance(value, int | float)
+                    }
+                )
+        return True
+
+    def _on_rollout_end(self) -> None:
+        if not self.rows:
+            return
+        keys = sorted({key for row in self.rows for key in row})
+        out = {"timestep": self.num_timesteps, "samples": len(self.rows)}
+        for key in keys:
+            values = [row[key] for row in self.rows if key in row]
+            out[f"{key}_mean"] = sum(values) / len(values)
+            if key in {"death", "timeout", "stuck"}:
+                out[f"{key}_count"] = sum(values)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(out, sort_keys=True) + "\n")
+        self.rows.clear()
 
 
 def load_config(path: Path) -> dict[str, object]:
@@ -40,7 +77,14 @@ def train(config: dict[str, object], run_id: str, output_dir: Path) -> Path:
         encoding="utf-8",
     )
 
-    env = make_vec_env(env_id=env_id, action_space=action_space, seed=seed, n_envs=n_envs)
+    reward_shaping = reward_shaping_from_config(config)
+    env = make_vec_env(
+        env_id=env_id,
+        action_space=action_space,
+        seed=seed,
+        n_envs=n_envs,
+        reward_shaping=reward_shaping,
+    )
     try:
         model = PPO(
             "CnnPolicy",
@@ -53,7 +97,9 @@ def train(config: dict[str, object], run_id: str, output_dir: Path) -> Path:
             batch_size=int(config.get("batch_size", 64)),
         )
         started = time.perf_counter()
-        model.learn(total_timesteps=total_timesteps, tb_log_name=run_id)
+        metrics_path = run_dir / "shaping_metrics.jsonl"
+        callback = ShapingMetricsCallback(metrics_path)
+        model.learn(total_timesteps=total_timesteps, tb_log_name=run_id, callback=callback)
         model_path = run_dir / "model.zip"
         model.save(model_path)
         metadata = {
@@ -65,6 +111,7 @@ def train(config: dict[str, object], run_id: str, output_dir: Path) -> Path:
             "total_timesteps": total_timesteps,
             "wall_time_s": time.perf_counter() - started,
             "model_path": str(model_path),
+            "shaping_metrics_path": str(metrics_path),
         }
         (run_dir / "train_summary.json").write_text(
             json.dumps(metadata, indent=2, sort_keys=True),
