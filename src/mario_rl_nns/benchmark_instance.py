@@ -113,8 +113,11 @@ def benchmark(args: argparse.Namespace) -> dict[str, object]:
         args.train_timesteps,
     )
     hourly_price = args.hourly_price
-    cost_per_1m = (
+    cost_per_1m_train = (
         hourly_price / (train_sps * 3600 / 1_000_000) if hourly_price is not None else None
+    )
+    cost_per_1m_env = (
+        hourly_price / (env_sps * 3600 / 1_000_000) if hourly_price is not None else None
     )
     return {
         **system_info(),
@@ -128,7 +131,8 @@ def benchmark(args: argparse.Namespace) -> dict[str, object]:
         "env_steps_per_sec": env_sps,
         "train_steps_per_sec": train_sps,
         "hourly_price": hourly_price,
-        "cost_per_1m_train_steps": cost_per_1m,
+        "cost_per_1m_env_steps": cost_per_1m_env,
+        "cost_per_1m_train_steps": cost_per_1m_train,
         "cpu_percent": psutil.cpu_percent(interval=1.0),
         "ram_used_mb": psutil.virtual_memory().used / 1024**2,
         "wall_time_s": time.perf_counter() - started,
@@ -160,4 +164,3 @@ def main(argv: Sequence[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
-
