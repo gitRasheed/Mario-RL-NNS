@@ -12,6 +12,16 @@ Current `gym-super-mario-bros` requires Python 3.13+, so use UV with 3.13:
 uv sync --python 3.13
 ```
 
+On a fresh RunPod:
+
+```bash
+git clone https://github.com/gitRasheed/Mario-RL-NNS.git
+cd Mario-RL-NNS
+uv sync
+scripts/smoke_env.sh --steps 100
+scripts/train_smoke.sh
+```
+
 ## First Gates
 
 Smoke-test the Mario environment:
