@@ -7,8 +7,8 @@ BATCH_SIZE="${BATCH_SIZE:-256}"
 EVAL_EPISODES="${EVAL_EPISODES:-20}"
 EVAL_MAX_EPISODE_STEPS="${EVAL_MAX_EPISODE_STEPS:-20000}"
 EVAL_PREFIX_STEPS="${EVAL_PREFIX_STEPS:-0,5,10,15,20,25,30}"
-RUN_INDEX="${RUN_INDEX:-001}"
-SWEEP_NAME="${SWEEP_NAME:-rtx4090_1m_diagnostic}"
+RUN_INDEX="${RUN_INDEX:-002}"
+SWEEP_NAME="${SWEEP_NAME:-rtx4090_5m_pilot}"
 HOURLY_PRICE="${HOURLY_PRICE:-0.69}"
 RUN_PREFIX="${RUN_INDEX}_${SWEEP_NAME}"
 
@@ -25,7 +25,7 @@ for item in "${runs[@]}"; do
   uv run mario-train-sb3 \
     --config "$config" \
     --run-id "$run_id" \
-    --total-timesteps 1000000 \
+    --total-timesteps 5000000 \
     --n-envs "$N_ENVS" \
     --n-steps "$N_STEPS" \
     --batch-size "$BATCH_SIZE" \

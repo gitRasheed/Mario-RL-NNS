@@ -34,6 +34,12 @@ Serious sweep artifacts are prefixed with `RUN_INDEX` so runs sort chronological
 RUN_INDEX=001 HOURLY_PRICE=0.69 scripts/06_run_1m_diagnostic_sweep.sh
 ```
 
+Next pilot after a promising 1M signal:
+
+```bash
+RUN_INDEX=002 HOURLY_PRICE=0.69 scripts/07_run_5m_pilot.sh
+```
+
 ## First Gates
 
 Smoke-test the Mario environment:
