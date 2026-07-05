@@ -5,6 +5,7 @@ N_ENVS="${N_ENVS:-64}"
 N_STEPS="${N_STEPS:-256}"
 BATCH_SIZE="${BATCH_SIZE:-256}"
 EVAL_EPISODES="${EVAL_EPISODES:-20}"
+EVAL_MAX_EPISODE_STEPS="${EVAL_MAX_EPISODE_STEPS:-20000}"
 RUN_INDEX="${RUN_INDEX:-001}"
 SWEEP_NAME="${SWEEP_NAME:-rtx4090_1m_diagnostic}"
 HOURLY_PRICE="${HOURLY_PRICE:-0.69}"
@@ -29,7 +30,10 @@ for item in "${runs[@]}"; do
     --batch-size "$BATCH_SIZE" \
     --seed 0 \
     --device cuda
-  uv run mario-evaluate --run-dir "artifacts/runs/$run_id" --episodes "$EVAL_EPISODES"
+  uv run mario-evaluate \
+    --run-dir "artifacts/runs/$run_id" \
+    --episodes "$EVAL_EPISODES" \
+    --max-episode-steps "$EVAL_MAX_EPISODE_STEPS"
 done
 
 uv run mario-summarize-runs \
