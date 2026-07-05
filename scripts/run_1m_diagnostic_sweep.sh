@@ -13,7 +13,9 @@ for item in "${runs[@]}"; do
     --config "$config" \
     --run-id "$run_id" \
     --total-timesteps 1000000 \
-    --n-envs 16 \
+    --n-envs "${N_ENVS:-64}" \
+    --n-steps "${N_STEPS:-256}" \
+    --batch-size "${BATCH_SIZE:-256}" \
     --seed 0 \
     --device cuda
   uv run mario-evaluate --run-dir "artifacts/runs/$run_id" --episodes "${EVAL_EPISODES:-20}"
