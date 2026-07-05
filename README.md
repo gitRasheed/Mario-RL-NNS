@@ -46,6 +46,12 @@ Small NNS tuning sweep:
 RUN_INDEX=003 HOURLY_PRICE=0.69 scripts/08_run_2m_nns_tuning.sh
 ```
 
+Scale selected NNS tuning winners:
+
+```bash
+RUN_INDEX=004 HOURLY_PRICE=0.69 scripts/09_run_5m_selected_nns.sh
+```
+
 ## First Gates
 
 Smoke-test the Mario environment:
