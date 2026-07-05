@@ -28,6 +28,12 @@ Quick throughput benchmark:
 scripts/bench_instance.sh --n-envs 4 --device cuda --train-timesteps 2048
 ```
 
+Serious sweep artifacts are prefixed with `RUN_INDEX` so runs sort chronologically:
+
+```bash
+RUN_INDEX=001 scripts/run_1m_diagnostic_sweep.sh
+```
+
 ## First Gates
 
 Smoke-test the Mario environment:
