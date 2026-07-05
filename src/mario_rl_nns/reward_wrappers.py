@@ -82,9 +82,12 @@ class RewardShapingWrapper(gym.Wrapper):
 
         shaping.update(
             {
+                "clear": float(bool(info.get("clear", info.get("flag_get", False)))),
                 "variant": self.config.variant,
                 "progress": progress,
+                "progress_max": float(info.get("progress_max", info.get("x_pos_max", progress))),
                 "x_pos": float(info.get("x_pos", progress)),
+                "x_pos_max": float(info.get("x_pos_max", info.get("progress_max", progress))),
                 "progress_delta": progress_delta,
                 "stuck": stuck,
                 "death": float(death),

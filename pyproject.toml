@@ -30,6 +30,8 @@ mario-smoke-train-env = "mario_rl_nns.wrappers:main"
 mario-check-nns = "mario_rl_nns.nns_rewards:main"
 mario-train-sb3 = "mario_rl_nns.train_sb3:main"
 mario-benchmark-instance = "mario_rl_nns.benchmark_instance:main"
+mario-evaluate = "mario_rl_nns.evaluate:main"
+mario-summarize-runs = "mario_rl_nns.summarize:main"
 
 [build-system]
 requires = ["setuptools>=68"]
