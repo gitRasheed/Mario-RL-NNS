@@ -112,6 +112,7 @@ def reward_shaping_from_config(config: dict[str, Any]) -> RewardShapingConfig | 
         )
     nns = config.get("nns")
     if isinstance(nns, dict):
+        nns = {**nns, "n_envs": int(config.get("n_envs", 1))}
         return RewardShapingConfig(
             variant=str(nns.get("variant", "nns_lpm")),
             nns=NNSRewardConfig(**nns),

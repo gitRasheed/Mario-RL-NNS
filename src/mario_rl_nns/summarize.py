@@ -88,10 +88,6 @@ def _row(run_dir: Path, hourly_price: float | None) -> dict[str, object]:
 
 
 def _write_docs(run_dirs: list[Path], rows: list[dict[str, object]]) -> None:
-    docs = Path("docs")
-    docs.mkdir(exist_ok=True)
-    all_runs = docs / "ALL_RUNS.md"
-    all_runs.write_text(_markdown(rows), encoding="utf-8")
     for run_dir, row in zip(run_dirs, rows, strict=False):
         run_dir.joinpath("RUN.md").write_text(_run_md(run_dir, row), encoding="utf-8")
 

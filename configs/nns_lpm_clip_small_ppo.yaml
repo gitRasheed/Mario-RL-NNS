@@ -1,0 +1,18 @@
+variant: ppo_nns_lpm_clip_small
+env_id: SuperMarioBros-1-1-v0
+action_space: RIGHT_ONLY
+seed: 0
+total_timesteps: 50000
+n_envs: 4
+device: auto
+nns:
+  variant: nns_lpm
+  window: 32
+  target_speed: 0.5
+  d_down: 2.0
+  lambda_down: 0.1
+  lambda_stuck: 0.1
+  lambda_death: 0.5
+  lambda_timeout: 0.0
+  clip_min: -2.0
+  clip_max: 1.0

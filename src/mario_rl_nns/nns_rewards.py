@@ -30,12 +30,15 @@ class NNSRewardConfig:
     lambda_timeout: float = 0.0
     clip_min: float = -5.0
     clip_max: float = 5.0
+    global_warmup_steps: int = 0
+    n_envs: int = 1
 
 
 @dataclass(slots=True)
 class NNSRewardState:
     config: NNSRewardConfig
     progress: deque[float] = field(init=False)
+    steps: int = 0
 
     def __post_init__(self) -> None:
         if self.config.window < 1:
@@ -45,6 +48,7 @@ class NNSRewardState:
     def reset(self, progress: float = 0.0) -> None:
         self.progress.clear()
         self.progress.append(float(progress))
+        self.steps = 0
 
     def shape(
         self,
@@ -55,6 +59,7 @@ class NNSRewardState:
     ) -> dict[str, float]:
         if not self.progress:
             self.reset(progress)
+        self.steps += 1
         self.progress.append(float(progress))
         progress_window = self.progress[-1] - self.progress[0]
         actual_speed = progress_window / max(len(self.progress) - 1, 1)
@@ -62,16 +67,21 @@ class NNSRewardState:
         up = upm(actual_speed, self.config.target_speed, self.config.d_up)
         stuck = float(len(self.progress) == self.progress.maxlen and progress_window <= 0.0)
 
-        extra = -self.config.lambda_down * down
-        if self.config.variant == "nns_upm_lpm":
-            extra += self.config.lambda_up * up
-        elif self.config.variant != "nns_lpm":
-            raise ValueError("variant must be 'nns_lpm' or 'nns_upm_lpm'")
+        warmup_steps = self.config.global_warmup_steps / max(self.config.n_envs, 1)
+        warmup_active = self.steps <= warmup_steps
+        if warmup_active:
+            extra = 0.0
+        else:
+            extra = -self.config.lambda_down * down
+            if self.config.variant == "nns_upm_lpm":
+                extra += self.config.lambda_up * up
+            elif self.config.variant != "nns_lpm":
+                raise ValueError("variant must be 'nns_lpm' or 'nns_upm_lpm'")
 
-        extra -= self.config.lambda_stuck * stuck
-        extra -= self.config.lambda_death * float(death)
-        extra -= self.config.lambda_timeout * float(timeout)
-        extra = min(max(extra, self.config.clip_min), self.config.clip_max)
+            extra -= self.config.lambda_stuck * stuck
+            extra -= self.config.lambda_death * float(death)
+            extra -= self.config.lambda_timeout * float(timeout)
+            extra = min(max(extra, self.config.clip_min), self.config.clip_max)
 
         return {
             "reward_base": float(reward_base),
@@ -85,6 +95,7 @@ class NNSRewardState:
             "target_speed": float(self.config.target_speed),
             "actual_speed": float(actual_speed),
             "speed_margin": float(actual_speed - self.config.target_speed),
+            "warmup_active": float(warmup_active),
             "stuck": stuck,
             "death": float(death),
             "timeout": float(timeout),

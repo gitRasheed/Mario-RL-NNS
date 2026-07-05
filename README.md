@@ -40,6 +40,12 @@ Next pilot after a promising 1M signal:
 RUN_INDEX=002 HOURLY_PRICE=0.69 scripts/07_run_5m_pilot.sh
 ```
 
+Small NNS tuning sweep:
+
+```bash
+RUN_INDEX=003 HOURLY_PRICE=0.69 scripts/08_run_2m_nns_tuning.sh
+```
+
 ## First Gates
 
 Smoke-test the Mario environment:

@@ -16,3 +16,15 @@ def test_nns_reward_keeps_base_and_train_reward_separate() -> None:
     assert shaped["reward_train"] < shaped["reward_base"]
     assert shaped["nns_extra_reward"] >= -5.0
 
+
+def test_nns_warmup_disables_shaping_temporarily() -> None:
+    state = NNSRewardState(
+        NNSRewardConfig(window=2, target_speed=1.0, global_warmup_steps=1, n_envs=1)
+    )
+    state.reset(0.0)
+    warmup = state.shape(1.0, progress=0.0, death=True)
+    shaped = state.shape(1.0, progress=0.0, death=True)
+    assert warmup["reward_train"] == warmup["reward_base"]
+    assert warmup["warmup_active"] == 1.0
+    assert shaped["reward_train"] < shaped["reward_base"]
+    assert shaped["warmup_active"] == 0.0
