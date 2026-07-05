@@ -7,6 +7,7 @@ BATCH_SIZE="${BATCH_SIZE:-256}"
 EVAL_EPISODES="${EVAL_EPISODES:-20}"
 RUN_INDEX="${RUN_INDEX:-001}"
 SWEEP_NAME="${SWEEP_NAME:-rtx4090_1m_diagnostic}"
+HOURLY_PRICE="${HOURLY_PRICE:-0.69}"
 RUN_PREFIX="${RUN_INDEX}_${SWEEP_NAME}"
 
 runs=(
@@ -34,4 +35,5 @@ done
 uv run mario-summarize-runs \
   "${run_dirs[@]}" \
   --output-csv "artifacts/runs/${RUN_PREFIX}_summary.csv" \
-  --output-md "artifacts/runs/${RUN_PREFIX}_summary.md"
+  --output-md "artifacts/runs/${RUN_PREFIX}_summary.md" \
+  --hourly-price "$HOURLY_PRICE"

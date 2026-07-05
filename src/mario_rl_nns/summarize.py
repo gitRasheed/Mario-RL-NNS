@@ -10,6 +10,9 @@ FIELDS = [
     "run_id",
     "wall_time_s",
     "final_fps",
+    "hourly_price",
+    "cost_usd",
+    "cost_per_1m_train_steps",
     "clear_rate",
     "mean_max_progress",
     "p10_max_progress",
@@ -25,8 +28,13 @@ FIELDS = [
 ]
 
 
-def summarize(run_dirs: list[Path], output_csv: Path, output_md: Path) -> list[dict[str, object]]:
-    rows = [_row(run_dir) for run_dir in run_dirs]
+def summarize(
+    run_dirs: list[Path],
+    output_csv: Path,
+    output_md: Path,
+    hourly_price: float | None = None,
+) -> list[dict[str, object]]:
+    rows = [_row(run_dir, hourly_price) for run_dir in run_dirs]
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     with output_csv.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
@@ -37,7 +45,7 @@ def summarize(run_dirs: list[Path], output_csv: Path, output_md: Path) -> list[d
     return rows
 
 
-def _row(run_dir: Path) -> dict[str, object]:
+def _row(run_dir: Path, hourly_price: float | None) -> dict[str, object]:
     train_summary = _json(run_dir / "train_summary.json")
     rollout = _last_jsonl(run_dir / "metrics" / "rollout_metrics.jsonl")
     train = _last_jsonl(run_dir / "metrics" / "train_metrics.jsonl")
@@ -45,10 +53,21 @@ def _row(run_dir: Path) -> dict[str, object]:
     fps = train.get("time_fps")
     if fps is None and train_summary.get("wall_time_s"):
         fps = float(train_summary.get("total_timesteps", 0)) / float(train_summary["wall_time_s"])
+    wall_time_s = train_summary.get("wall_time_s")
+    timesteps = float(train_summary.get("total_timesteps", 0) or 0)
+    cost_usd = None
+    cost_per_1m = None
+    if hourly_price is not None and wall_time_s:
+        cost_usd = hourly_price * float(wall_time_s) / 3600
+        if timesteps:
+            cost_per_1m = cost_usd / (timesteps / 1_000_000)
     return {
         "run_id": train_summary.get("run_id", run_dir.name),
-        "wall_time_s": _round(train_summary.get("wall_time_s")),
+        "wall_time_s": _round(wall_time_s),
         "final_fps": _round(fps),
+        "hourly_price": _round(hourly_price),
+        "cost_usd": _round(cost_usd),
+        "cost_per_1m_train_steps": _round(cost_per_1m),
         "clear_rate": _round(eval_summary.get("clear_rate")),
         "mean_max_progress": _round(eval_summary.get("max_progress_mean")),
         "p10_max_progress": _round(eval_summary.get("max_progress_p10")),
@@ -128,12 +147,13 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--run-dir", action="append", type=Path, required=True)
     parser.add_argument("--output-csv", type=Path, required=True)
     parser.add_argument("--output-md", type=Path, required=True)
+    parser.add_argument("--hourly-price", type=float)
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
-    rows = summarize(args.run_dir, args.output_csv, args.output_md)
+    rows = summarize(args.run_dir, args.output_csv, args.output_md, args.hourly_price)
     print(_markdown(rows))
 
 
