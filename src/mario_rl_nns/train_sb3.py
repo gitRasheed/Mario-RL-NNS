@@ -285,6 +285,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int)
     parser.add_argument("--total-timesteps", type=int)
     parser.add_argument("--n-envs", type=int)
+    parser.add_argument("--n-steps", type=int)
+    parser.add_argument("--batch-size", type=int)
     parser.add_argument("--device")
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/runs"))
     return parser.parse_args(argv)
@@ -298,6 +300,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     override(config, "seed", args.seed)
     override(config, "total_timesteps", args.total_timesteps)
     override(config, "n_envs", args.n_envs)
+    override(config, "n_steps", args.n_steps)
+    override(config, "batch_size", args.batch_size)
     override(config, "device", args.device)
     run_id = args.run_id or f"{config.get('variant', 'ppo')}_s{config.get('seed', 0)}"
     print(train(config, run_id=run_id, output_dir=args.output_dir))

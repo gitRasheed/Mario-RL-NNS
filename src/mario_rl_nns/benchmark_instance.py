@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+import threading
 import time
 from collections.abc import Sequence
 from pathlib import Path
@@ -12,6 +13,45 @@ import torch
 from stable_baselines3 import PPO
 
 from mario_rl_nns.wrappers import make_vec_env
+
+
+class UtilizationSampler:
+    def __init__(self, interval_s: float = 0.5):
+        self.interval_s = interval_s
+        self.rows: list[dict[str, float]] = []
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def __enter__(self):
+        psutil.cpu_percent(interval=None)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *args):
+        self._stop.set()
+        self._thread.join(timeout=2)
+
+    def _run(self) -> None:
+        while not self._stop.wait(self.interval_s):
+            gpu = gpu_info()
+            self.rows.append(
+                {
+                    "cpu_percent": psutil.cpu_percent(interval=None),
+                    "gpu_util_percent": float(gpu.get("gpu_util_percent", 0.0)),
+                    "gpu_memory_util_percent": float(gpu.get("gpu_memory_util_percent", 0.0)),
+                    "vram_used_mb": float(gpu.get("vram_used_mb", 0.0)),
+                }
+            )
+
+    def summary(self) -> dict[str, float]:
+        if not self.rows:
+            return {}
+        out = {}
+        for key in self.rows[0]:
+            values = [row[key] for row in self.rows]
+            out[f"avg_{key}"] = sum(values) / len(values)
+            out[f"max_{key}"] = max(values)
+        return out
 
 
 def gpu_info() -> dict[str, object]:
@@ -75,6 +115,8 @@ def train_steps_per_sec(
     n_envs: int,
     device: str,
     timesteps: int,
+    n_steps: int,
+    batch_size: int,
 ) -> float:
     env = make_vec_env(env_id=env_id, action_space=action_space, seed=seed, n_envs=n_envs)
     try:
@@ -84,8 +126,8 @@ def train_steps_per_sec(
             seed=seed,
             device=device,
             verbose=0,
-            n_steps=128,
-            batch_size=64,
+            n_steps=n_steps,
+            batch_size=batch_size,
         )
         started = time.perf_counter()
         model.learn(total_timesteps=timesteps)
@@ -97,21 +139,24 @@ def train_steps_per_sec(
 
 def benchmark(args: argparse.Namespace) -> dict[str, object]:
     started = time.perf_counter()
-    env_sps = env_steps_per_sec(
-        args.env_id,
-        args.action_space,
-        args.seed,
-        args.n_envs,
-        args.env_steps,
-    )
-    train_sps = train_steps_per_sec(
-        args.env_id,
-        args.action_space,
-        args.seed,
-        args.n_envs,
-        args.device,
-        args.train_timesteps,
-    )
+    with UtilizationSampler() as sampler:
+        env_sps = env_steps_per_sec(
+            args.env_id,
+            args.action_space,
+            args.seed,
+            args.n_envs,
+            args.env_steps,
+        )
+        train_sps = train_steps_per_sec(
+            args.env_id,
+            args.action_space,
+            args.seed,
+            args.n_envs,
+            args.device,
+            args.train_timesteps,
+            args.n_steps,
+            args.batch_size,
+        )
     hourly_price = args.hourly_price
     cost_per_1m_train = (
         hourly_price / (train_sps * 3600 / 1_000_000) if hourly_price is not None else None
@@ -126,6 +171,8 @@ def benchmark(args: argparse.Namespace) -> dict[str, object]:
         "seed": args.seed,
         "n_envs": args.n_envs,
         "device": args.device,
+        "n_steps": args.n_steps,
+        "batch_size": args.batch_size,
         "env_benchmark_steps": args.env_steps,
         "train_timesteps": args.train_timesteps,
         "env_steps_per_sec": env_sps,
@@ -136,6 +183,7 @@ def benchmark(args: argparse.Namespace) -> dict[str, object]:
         "cpu_percent": psutil.cpu_percent(interval=1.0),
         "ram_used_mb": psutil.virtual_memory().used / 1024**2,
         "wall_time_s": time.perf_counter() - started,
+        **sampler.summary(),
         **{f"end_{key}": value for key, value in gpu_info().items()},
     }
 
@@ -147,6 +195,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--n-envs", type=int, default=1)
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--n-steps", type=int, default=128)
+    parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--env-steps", type=int, default=2048)
     parser.add_argument("--train-timesteps", type=int, default=2048)
     parser.add_argument("--hourly-price", type=float)
