@@ -18,20 +18,20 @@ On a fresh RunPod:
 git clone https://github.com/gitRasheed/Mario-RL-NNS.git
 cd Mario-RL-NNS
 uv sync
-scripts/smoke_env.sh --steps 100
-scripts/train_smoke.sh
+scripts/01_smoke_env.sh --steps 100
+scripts/03_train_smoke.sh
 ```
 
 Quick throughput benchmark:
 
 ```bash
-scripts/bench_instance.sh --n-envs 4 --device cuda --train-timesteps 2048
+scripts/04_bench_instance.sh --n-envs 4 --device cuda --train-timesteps 2048
 ```
 
 Serious sweep artifacts are prefixed with `RUN_INDEX` so runs sort chronologically:
 
 ```bash
-RUN_INDEX=001 scripts/run_1m_diagnostic_sweep.sh
+RUN_INDEX=001 scripts/06_run_1m_diagnostic_sweep.sh
 ```
 
 ## First Gates
@@ -57,7 +57,7 @@ uv run mario-smoke-train-env --steps 10
 Run a tiny PPO baseline sanity check:
 
 ```bash
-scripts/train_smoke.sh
+scripts/03_train_smoke.sh
 ```
 
 ## Early Plan
