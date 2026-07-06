@@ -13,6 +13,7 @@ from pathlib import Path
 import gymnasium as gym
 from gymnasium import spaces
 from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 
 from mario_rl_nns.nns_rewards import NNSRewardConfig
 from mario_rl_nns.ram_adapter import RAM_OBSERVATION_SPACE, make_ram_vec_env
@@ -213,6 +214,7 @@ def finetune(
     n_steps: int,
     batch_size: int,
     nns_config: str = "conservative",
+    checkpoint_steps: Sequence[int] = (),
 ) -> dict[str, object]:
     reward_shaping = nns_preset(nns_config, n_envs) if variant == "nns" else None
     env = make_ram_vec_env(seed=seed, n_envs=n_envs, reward_shaping=reward_shaping)
@@ -230,6 +232,7 @@ def finetune(
         "n_steps": n_steps,
         "batch_size": batch_size,
         "nns_config": nns_config if variant == "nns" else None,
+        "checkpoint_steps": list(checkpoint_steps),
     }
     if reward_shaping is not None:
         config["nns"] = asdict(reward_shaping.nns)
@@ -252,7 +255,14 @@ def finetune(
             if reward_shaping is not None
             else BaselineMetricsCallback(metrics_dir, started)
         )
-        model.learn(total_timesteps=total_timesteps, callback=callback, reset_num_timesteps=False)
+        callbacks = [callback]
+        if checkpoint_steps:
+            callbacks.append(StepCheckpointCallback(run_dir / "checkpoints", checkpoint_steps))
+        model.learn(
+            total_timesteps=total_timesteps,
+            callback=CallbackList(callbacks),
+            reset_num_timesteps=False,
+        )
         model.save(run_dir / "model.zip")
         summary = {
             "run_id": run_dir.name,
@@ -333,6 +343,27 @@ def summarize(run_dirs: list[Path], output_csv: Path, output_md: Path, hourly_pr
         writer.writeheader()
         writer.writerows(rows)
     output_md.write_text(_markdown(rows, fields), encoding="utf-8")
+
+
+class StepCheckpointCallback(BaseCallback):
+    def __init__(self, output_dir: Path, steps: Sequence[int]):
+        super().__init__()
+        self.output_dir = output_dir
+        self.steps = sorted({int(step) for step in steps if int(step) > 0})
+        self.saved: set[int] = set()
+        self.start_timesteps = 0
+
+    def _on_training_start(self) -> None:
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.start_timesteps = self.num_timesteps
+
+    def _on_step(self) -> bool:
+        trained_timesteps = self.num_timesteps - self.start_timesteps
+        for step in self.steps:
+            if step not in self.saved and trained_timesteps >= step:
+                self.model.save(self.output_dir / f"step_{step}.zip")
+                self.saved.add(step)
+        return True
 
 
 def _episode_row(index: int, seed: int, prefix: int) -> dict[str, object]:
@@ -440,6 +471,10 @@ def _last_jsonl(path: Path) -> dict[str, object]:
     return json.loads(path.read_text().strip().splitlines()[-1])
 
 
+def _steps(value: str) -> list[int]:
+    return [int(item) for item in value.split(",") if item.strip()]
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
@@ -465,6 +500,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     train_p.add_argument("--n-steps", type=int, default=256)
     train_p.add_argument("--batch-size", type=int, default=256)
     train_p.add_argument("--nns-config", choices=NNS_PRESETS, default="conservative")
+    train_p.add_argument("--checkpoint-steps", type=_steps, default=[])
 
     sum_p = sub.add_parser("summary")
     sum_p.add_argument("--run-dir", action="append", type=Path, required=True)
@@ -499,6 +535,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.n_steps,
             args.batch_size,
             args.nns_config,
+            args.checkpoint_steps,
         )
         print(json.dumps(summary, indent=2, sort_keys=True))
     elif args.command == "summary":
