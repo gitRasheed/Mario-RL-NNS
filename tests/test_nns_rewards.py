@@ -28,3 +28,19 @@ def test_nns_warmup_disables_shaping_temporarily() -> None:
     assert warmup["warmup_active"] == 1.0
     assert shaped["reward_train"] < shaped["reward_base"]
     assert shaped["warmup_active"] == 0.0
+
+
+def test_slow_clear_lpm_only_applies_after_target_clear_steps() -> None:
+    state = NNSRewardState(
+        NNSRewardConfig(
+            target_clear_steps=10,
+            lambda_slow_clear=0.01,
+            clip_min=-5.0,
+        )
+    )
+    state.reset(0.0)
+    on_time = state.shape(1.0, progress=1.0, clear=True, episode_step=10)
+    slow = state.shape(1.0, progress=1.0, clear=True, episode_step=12)
+    assert on_time["slow_clear_lpm"] == 0.0
+    assert slow["slow_clear_lpm"] == 4.0
+    assert slow["reward_train"] < on_time["reward_train"]

@@ -32,6 +32,7 @@ mario-train-sb3 = "mario_rl_nns.train_sb3:main"
 mario-benchmark-instance = "mario_rl_nns.benchmark_instance:main"
 mario-evaluate = "mario_rl_nns.evaluate:main"
 mario-summarize-runs = "mario_rl_nns.summarize:main"
+mario-external-checkpoint = "mario_rl_nns.external_checkpoint:main"
 
 [build-system]
 requires = ["setuptools>=68"]

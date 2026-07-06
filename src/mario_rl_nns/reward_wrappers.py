@@ -50,6 +50,7 @@ class RewardShapingWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env, config: RewardShapingConfig):
         super().__init__(env)
         self.config = config
+        self.episode_steps = 0
         if config.variant == "flat_penalty" and config.flat is not None:
             self.state = RewardShapingState(config.flat.stuck_window)
         elif config.nns is not None:
@@ -60,6 +61,7 @@ class RewardShapingWrapper(gym.Wrapper):
 
     def reset(self, **kwargs: Any):
         obs, info = self.env.reset(**kwargs)
+        self.episode_steps = 0
         progress = _progress(info)
         self.state.reset(progress)
         if hasattr(self, "nns_state"):
@@ -68,21 +70,30 @@ class RewardShapingWrapper(gym.Wrapper):
 
     def step(self, action: Any):
         obs, reward_base, terminated, truncated, info = self.env.step(action)
+        self.episode_steps += 1
         progress = _progress(info)
         progress_delta, stuck = self.state.push(progress)
         death = bool(info.get("death", info.get("is_dead", False)))
         timeout = bool(info.get("timeout", False))
+        clear = bool(info.get("clear", info.get("flag_get", False)))
 
         if self.config.variant == "flat_penalty" and self.config.flat is not None:
             shaping = _flat_shape(self.config.flat, reward_base, death, timeout, stuck)
         elif self.config.nns is not None:
-            shaping = self.nns_state.shape(reward_base, progress, death=death, timeout=timeout)
+            shaping = self.nns_state.shape(
+                reward_base,
+                progress,
+                death=death,
+                timeout=timeout,
+                clear=clear,
+                episode_step=self.episode_steps,
+            )
         else:
             raise RuntimeError("invalid reward shaping config")
 
         shaping.update(
             {
-                "clear": float(bool(info.get("clear", info.get("flag_get", False)))),
+                "clear": float(clear),
                 "variant": self.config.variant,
                 "progress": progress,
                 "progress_max": float(info.get("progress_max", info.get("x_pos_max", progress))),

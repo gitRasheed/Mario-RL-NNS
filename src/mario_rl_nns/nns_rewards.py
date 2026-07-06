@@ -32,6 +32,9 @@ class NNSRewardConfig:
     clip_max: float = 5.0
     global_warmup_steps: int = 0
     n_envs: int = 1
+    target_clear_steps: int = 0
+    lambda_slow_clear: float = 0.0
+    d_time: float = 2.0
 
 
 @dataclass(slots=True)
@@ -56,6 +59,8 @@ class NNSRewardState:
         progress: float,
         death: bool = False,
         timeout: bool = False,
+        clear: bool = False,
+        episode_step: int | None = None,
     ) -> dict[str, float]:
         if not self.progress:
             self.reset(progress)
@@ -66,6 +71,13 @@ class NNSRewardState:
         down = lpm(actual_speed, self.config.target_speed, self.config.d_down)
         up = upm(actual_speed, self.config.target_speed, self.config.d_up)
         stuck = float(len(self.progress) == self.progress.maxlen and progress_window <= 0.0)
+        slow_clear_lpm = 0.0
+        if clear and self.config.target_clear_steps > 0 and episode_step is not None:
+            slow_clear_lpm = lpm(
+                -float(episode_step),
+                target=-float(self.config.target_clear_steps),
+                degree=self.config.d_time,
+            )
 
         warmup_steps = self.config.global_warmup_steps / max(self.config.n_envs, 1)
         warmup_active = self.steps <= warmup_steps
@@ -81,6 +93,7 @@ class NNSRewardState:
             extra -= self.config.lambda_stuck * stuck
             extra -= self.config.lambda_death * float(death)
             extra -= self.config.lambda_timeout * float(timeout)
+            extra -= self.config.lambda_slow_clear * slow_clear_lpm
             extra = min(max(extra, self.config.clip_min), self.config.clip_max)
 
         return {
@@ -96,6 +109,7 @@ class NNSRewardState:
             "actual_speed": float(actual_speed),
             "speed_margin": float(actual_speed - self.config.target_speed),
             "warmup_active": float(warmup_active),
+            "slow_clear_lpm": float(slow_clear_lpm),
             "stuck": stuck,
             "death": float(death),
             "timeout": float(timeout),
