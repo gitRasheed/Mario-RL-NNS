@@ -9,3 +9,4 @@
 | 006 | external_checkpoint_eval_yumouwei_pretrained1 | external PPO checkpoint eval | n/a | eval only | Reproduced a clearing external SB3 PPO checkpoint: 50-episode clear rate 0.58, mean progress 3006.3. Use this as the next fine-tune starting point after adding a clean RAM adapter. |
 | 007 | clean_adapter_checkpoint_eval | external PPO checkpoint eval | n/a | eval only | Clean local RAM adapter reproduced the external checkpoint: clear rate 0.58, mean progress 3006.3, no deaths. |
 | 008 | speed_tail_nns_sweep | baseline / speed-tail NNS presets | 250,000 | 0 | `baseline_plus_time_tail` preserved 100% clear and reached 1077-step completion mean at 250k; extend across 500k/1M before seeds. |
+| 009 | time_tail_budget_extension | baseline / baseline_plus_time_tail | 250,000 / 500,000 / 1,000,000 | 0 | `baseline_plus_time_tail` preserved 100% clear at every budget and held 1077-1078 step completion; rerun baseline was unstable at 500k/1M. Run paired seeds next. |
