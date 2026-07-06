@@ -4,6 +4,36 @@ Research harness for testing whether NNS / partial-moment reward shaping improve
 
 The first rule for this repo: keep training reward, base environment reward, and task metrics separate. Shaped reward is not the result.
 
+## Current Finding
+
+The strongest result is an early fine-tuning reliability result from a competent imported Mario PPO checkpoint, not a from-scratch PPO win.
+
+At 250k continued-training steps over 10 paired seeds, `baseline_plus_time_tail` improved reliability relative to normal PPO continuation:
+
+| metric | baseline | time-tail |
+| --- | ---: | ---: |
+| Clear rate | 0.758 | 0.958 |
+| Cap rate | 0.242 | 0.042 |
+| Penalized completion | 2044.48 | 1263.26 |
+| Completion given clear | 1099.93 | 1099.96 |
+| Stuck fraction | 0.192 | 0.040 |
+| Mean progress | 3090.38 | 3058.60 |
+
+Interpretation: time-tail/NNS shaping improves early reliability and reduces capped/stuck failures. It does not make successful clears faster, and it should not be described as a better asymptotic Mario policy.
+
+Research-note materials:
+
+- `012_writeup/paper_outline.md`
+- `012_writeup/methods.md`
+- `012_writeup/results_table.md`
+- `docs/ALL_RUNS.md`
+
+Final confirmation artifacts:
+
+- `artifacts/runs/011_10seed_250k_time_tail_summary.csv`
+- `artifacts/runs/011_10seed_250k_time_tail_paired_deltas.csv`
+- `012_writeup/paired_delta_stats.csv`
+
 ## Setup
 
 Current `gym-super-mario-bros` requires Python 3.13+, so use UV with 3.13:
@@ -52,6 +82,13 @@ Scale selected NNS tuning winners:
 RUN_INDEX=004 HOURLY_PRICE=0.69 scripts/09_run_5m_selected_nns.sh
 ```
 
+Final checkpoint-continuation sweeps:
+
+```bash
+scripts/10_run_high_confidence_time_tail.sh
+scripts/11_run_10seed_250k_time_tail.sh
+```
+
 ## First Gates
 
 Smoke-test the Mario environment:
@@ -78,12 +115,13 @@ Run a tiny PPO baseline sanity check:
 scripts/03_train_smoke.sh
 ```
 
-## Early Plan
+## Project Arc
 
-1. Environment smoke test: import, wrap, reset, step, inspect `info`.
-2. Preprocessing: grayscale, 84x84 resize, 4-frame stack.
-3. PPO baseline: `RIGHT_ONLY`, `SuperMarioBros-1-1-v0`, short local run.
-4. Flat penalty wrapper: death/stuck penalty.
-5. NNS LPM wrapper: bounded extra reward, logged separately from base reward.
+1. Built a reproducible Mario RL harness with separate base reward, shaped reward, and task metrics.
+2. Tested from-scratch PPO plus generic NNS/progress shaping. Early signals did not survive 5M checks.
+3. Pivoted to a stronger test: continue training from a competent external PPO checkpoint using a clean local RAM adapter.
+4. Found that generic conservative NNS did not beat normal checkpoint continuation at 1M.
+5. Tested a smaller time-tail term focused on slow-clear tails.
+6. Confirmed the useful effect at 250k: early reliability/stability improves, while conditional speed does not.
 
-RunPod benchmarking and multi-seed sweeps come after the local smoke and first PPO baseline work.
+The current write-up claim is intentionally narrow: partial-moment time-tail shaping improves early fine-tuning reliability from an already-capable Mario policy.
