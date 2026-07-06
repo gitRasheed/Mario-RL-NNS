@@ -38,6 +38,7 @@ Positive clear/progress deltas are good; negative cap/completion/stuck deltas ar
 
 ## Figures
 
-- `figures/011_scatter_clear_rate.png`
-- `figures/011_scatter_cap_rate.png`
-- `figures/011_scatter_stuck_fraction.png`
+- `figures/011_reliability_by_seed.png` shows paired seed-level clear/cap/stuck outcomes.
+- `figures/011_penalized_completion_by_seed.png` shows why the all-episode completion mean improves: time-tail avoids most capped episodes.
+
+Figure source data: `per_seed_250k.csv`.

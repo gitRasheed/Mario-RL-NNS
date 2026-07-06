@@ -32,6 +32,7 @@ Final confirmation artifacts:
 
 - `artifacts/runs/011_10seed_250k_time_tail_summary.csv`
 - `artifacts/runs/011_10seed_250k_time_tail_paired_deltas.csv`
+- `012_writeup/per_seed_250k.csv`
 - `012_writeup/paired_delta_stats.csv`
 
 ## Setup
